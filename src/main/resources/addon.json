@@ -1,0 +1,5 @@
+{
+  "uuid": "%uuid%",
+  "name": "FreeF5",
+  "mainClass": "de.f0x.freef5.FreeF5"
+}
