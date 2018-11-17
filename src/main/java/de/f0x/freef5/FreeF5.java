@@ -1,9 +1,13 @@
 package de.f0x.freef5;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonPrimitive;
 import net.labymod.api.LabyModAddon;
+import net.labymod.api.events.ServerMessageEvent;
 import net.labymod.settings.elements.KeyElement;
 import net.labymod.settings.elements.SettingsElement;
 import net.labymod.utils.Consumer;
+import net.labymod.utils.ServerData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -16,11 +20,12 @@ public class FreeF5 extends LabyModAddon {
 
     private static FreeF5 instance;
 
+    private boolean enabled;
+
     private Minecraft mc;
 
-    private boolean freeMode, wasKeyDown;
+    private boolean freeMode;
     private int lastThirdPersonView;
-    public float yaw, pitch;
 
     private CustomRenderer customRenderer;
     private EntityRenderer defaultRenderer;
@@ -34,6 +39,21 @@ public class FreeF5 extends LabyModAddon {
 
         customRenderer = new CustomRenderer(mc, mc.getResourceManager());
         getApi().registerForgeListener(this);
+
+        getApi().getEventManager().registerOnJoin(new Consumer<ServerData>() {
+            @Override
+            public void accept(ServerData serverData) {
+                enabled = true;
+            }
+        });
+        getApi().getEventManager().register(new ServerMessageEvent() {
+            @Override
+            public void onServerMessage(String s, JsonElement msg) {
+                if (s.equals("freef5") && !msg.getAsBoolean()) {
+                    enabled = false;
+                }
+            }
+        });
     }
 
     @Override
@@ -62,28 +82,31 @@ public class FreeF5 extends LabyModAddon {
 
     @SubscribeEvent
     public void onTick(TickEvent.ClientTickEvent e) {
-        if (Keyboard.isKeyDown(getConfig().get("key").getAsInt())) {
-            freeMode = true;
-            if (mc.gameSettings.thirdPersonView < 3) {
-                lastThirdPersonView = mc.gameSettings.thirdPersonView;
+        if (enabled) {
+            if (Keyboard.isKeyDown(getConfig().get("key").getAsInt())) {
+                freeMode = true;
+                if (mc.gameSettings.thirdPersonView < 3) {
+                    lastThirdPersonView = mc.gameSettings.thirdPersonView;
 
-                customRenderer.setCustomYaw(mc.thePlayer.rotationYaw);
-                customRenderer.setCustomPitch(mc.thePlayer.rotationPitch);
+                    customRenderer.setCustomYaw(mc.thePlayer.rotationYaw);
+                    customRenderer.setCustomPitch(mc.thePlayer.rotationPitch);
+                }
+                mc.gameSettings.thirdPersonView = 3;
+            } else {
+                freeMode = false;
+                if (mc.gameSettings.thirdPersonView == 3) mc.gameSettings.thirdPersonView = lastThirdPersonView;
             }
-            mc.gameSettings.thirdPersonView = 3;
-        } else {
-            freeMode = false;
-            if (mc.gameSettings.thirdPersonView == 3) mc.gameSettings.thirdPersonView = lastThirdPersonView;
         }
-
     }
 
     @SubscribeEvent
     public void onRenderTick(TickEvent.RenderTickEvent e) {
-        if (freeMode) {
-            mc.entityRenderer = customRenderer;
-        } else {
-            mc.entityRenderer = defaultRenderer;
+        if (enabled) {
+            if (freeMode) {
+                mc.entityRenderer = customRenderer;
+            } else {
+                mc.entityRenderer = defaultRenderer;
+            }
         }
     }
 
