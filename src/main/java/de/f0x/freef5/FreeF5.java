@@ -20,7 +20,7 @@ public class FreeF5 extends LabyModAddon {
 
     private static FreeF5 instance;
 
-    private boolean enabled;
+    private boolean enabled = true;
 
     private Minecraft mc;
 
@@ -40,7 +40,7 @@ public class FreeF5 extends LabyModAddon {
         customRenderer = new CustomRenderer(mc, mc.getResourceManager());
         getApi().registerForgeListener(this);
 
-        getApi().getEventManager().registerOnJoin(new Consumer<ServerData>() {
+        getApi().getEventManager().registerOnQuit(new Consumer<ServerData>() {
             @Override
             public void accept(ServerData serverData) {
                 enabled = true;
